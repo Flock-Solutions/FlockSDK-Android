@@ -12,7 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.withflock.flocksdk.utils.FlockEventBus
 import org.json.JSONObject
 
-class FlockWebViewActivity : AppCompatActivity() {
+internal class FlockWebViewActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_URI = "extra_uri"
         var callback: FlockWebViewCallback? = null

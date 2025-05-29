@@ -116,7 +116,7 @@ object FlockSDK {
      *
      * Example usage:
      * ```kotlin
-     * FlockSDK.navigate("invitee")
+     * FlockSDK.navigate("invitee?state=success")
      * ```
      */
     fun navigate(pageType: String) {

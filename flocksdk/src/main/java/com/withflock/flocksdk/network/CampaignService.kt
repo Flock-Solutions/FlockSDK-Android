@@ -5,7 +5,7 @@ import com.withflock.flocksdk.model.Campaign
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
-class CampaignService(private val publicAccessKey: String, private val baseUrl: String = "https://api.withflock.com") {
+internal class CampaignService(private val publicAccessKey: String, private val baseUrl: String = "https://api.withflock.com") {
     private val client = OkHttpClient()
     private val gson = Gson()
 

@@ -8,7 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class CustomerService(private val publicAccessKey: String, private val baseUrl: String = "https://api.withflock.com") {
+internal class CustomerService(private val publicAccessKey: String, private val baseUrl: String = "https://api.withflock.com") {
     private val client = OkHttpClient()
     private val gson = Gson()
 
