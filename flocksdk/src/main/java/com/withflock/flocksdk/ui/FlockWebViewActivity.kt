@@ -1,4 +1,4 @@
-package com.withflock.flocksdk
+package com.withflock.flocksdk.ui
 
 import android.content.Context
 import android.content.Intent
@@ -9,11 +9,13 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import com.withflock.flocksdk.utils.FlockEventBus
 import org.json.JSONObject
 
 class FlockWebViewActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_URI = "extra_uri"
+        var callback: FlockWebViewCallback? = null
 
         fun start(context: Context, uri: String) {
             val intent = Intent(context, FlockWebViewActivity::class.java)
@@ -45,14 +47,37 @@ class FlockWebViewActivity : AppCompatActivity() {
         webView.settings.javaScriptEnabled = true
         webView.webViewClient = WebViewClient()
 
+        // Register navigation listener
+        val navigateListener: (String) -> Unit = { pageType ->
+            val command = JSONObject()
+                .put("command", "navigate")
+                .put("data", JSONObject().put("pageType", pageType))
+                .toString()
+            val js = "window.postMessage($command, '*');"
+            webView.evaluateJavascript(js, null)
+        }
+        FlockEventBus.registerNavigateListener(navigateListener)
+
         // Inject JS interface for window.ReactNativeWebView.postMessage
         webView.addJavascriptInterface(object {
             @JavascriptInterface
             fun postMessage(message: String) {
                 try {
                     val json = JSONObject(message)
-                    if (json.optString("event") == "Close") {
-                        runOnUiThread { finish() }
+                    when (json.optString("event")) {
+                        "close" -> {
+                            runOnUiThread {
+                                callback?.onClose()
+                                callback = null
+                                finish()
+                            }
+                        }
+                        "success" -> {
+                            runOnUiThread { callback?.onSuccess() }
+                        }
+                        "invalid" -> {
+                            runOnUiThread { callback?.onInvalid() }
+                        }
                     }
                 } catch (e: Exception) {
                     // Optionally log or handle parse error
@@ -65,5 +90,17 @@ class FlockWebViewActivity : AppCompatActivity() {
 
         rootLayout.addView(webView)
         setContentView(rootLayout)
+
+        // Unregister navigation listener on destroy
+        onDestroyAction = {
+            FlockEventBus.unregisterNavigateListener(navigateListener)
+        }
+    }
+
+    private var onDestroyAction: (() -> Unit)? = null
+
+    override fun onDestroy() {
+        onDestroyAction?.invoke()
+        super.onDestroy()
     }
 }

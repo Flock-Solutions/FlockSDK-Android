@@ -1,4 +1,4 @@
-package com.withflock.flocksdk
+package com.withflock.flocksdk.model
 
 data class ScreenProps(
     val backgroundColor: String? = null,

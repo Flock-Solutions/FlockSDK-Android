@@ -7,6 +7,9 @@ import com.withflock.flocksdk.model.Customer
 import com.withflock.flocksdk.model.IdentifyRequest
 import com.withflock.flocksdk.network.CampaignService
 import com.withflock.flocksdk.network.CustomerService
+import com.withflock.flocksdk.ui.FlockWebViewActivity
+import com.withflock.flocksdk.ui.FlockWebViewCallback
+import com.withflock.flocksdk.utils.FlockEventBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -36,8 +39,12 @@ object FlockSDK {
         fetchLiveCampaign()
     }
 
-    fun getCurrentCampaign(): Campaign? = campaign
+    /**
+     * Returns true if the SDK has been fully initialized & campaign has been fetched successfully
+     */
+    fun isInitialized(): Boolean = campaign != null
 
+    fun getCurrentCampaign(): Campaign? = campaign
 
     /**
      * Identifies a customer to Flock.
@@ -75,14 +82,45 @@ object FlockSDK {
      *
      * @param context The current Activity context
      * @param pageType The page type to open (e.g., "referrer", "invitee")
+     * @param callback Optional callback to react to web events (close, success, invalid)
+     *
+     * Example usage:
+     * ```kotlin
+     * FlockSDK.openPage(context, "invitee", object : FlockWebViewCallback {
+     *     override fun onClose() {
+     *         // Handle when the modal is closed
+     *     }
+     *     override fun onSuccess() {
+     *         // Handle success event from the web page
+     *     }
+     *     override fun onInvalid() {
+     *         // Handle invalid event from the web page
+     *     }
+     * })
+     * ```
      */
-    fun openWebPage(context: Context, pageType: String) {
+    fun openPage(context: Context, pageType: String, callback: FlockWebViewCallback? = null) {
         val path = pageType.split("?").first()
         val query = pageType.split("?").getOrElse(1) { "" }
         val campaignPage = campaign?.campaignPages?.find { it.path.contains(pageType) }
         val url = "$APP_BASE_URL/pages/$path?key=$publicAccessKey&campaign_id=${campaign?.id}&customer_id=${customer?.id}&bg=${campaignPage?.screenProps?.backgroundColor}&$query"
 
+        FlockWebViewActivity.callback = callback
         FlockWebViewActivity.start(context, url)
+    }
+
+    /**
+     * Navigates to a page within the same web view.
+     *
+     * @param pageType The pageType to navigate to.
+     *
+     * Example usage:
+     * ```kotlin
+     * FlockSDK.navigate("invitee")
+     * ```
+     */
+    fun navigate(pageType: String) {
+        FlockEventBus.postNavigate(pageType)
     }
 
     private fun fetchLiveCampaign() {
