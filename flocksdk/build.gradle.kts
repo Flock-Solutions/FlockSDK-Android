@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "com.withflock.flocksdk"
     compileSdk = 35
+    version = "1.0.0"
 
     defaultConfig {
         minSdk = 24
