@@ -1,7 +1,10 @@
 package com.withflock.flocksdk.network
 
 import com.google.gson.Gson
+import com.withflock.flocksdk.FlockEnvironment
 import com.withflock.flocksdk.model.Campaign
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -9,8 +12,13 @@ internal class CampaignService(private val publicAccessKey: String, private val 
     private val client = OkHttpClient()
     private val gson = Gson()
 
-    fun getLiveCampaign(): Campaign {
-        val url = "$baseUrl/campaigns/live"
+    fun getLiveCampaign(environment: FlockEnvironment): Campaign {
+        val url = "$baseUrl/campaigns/live".toHttpUrlOrNull()!!
+            .newBuilder()
+            .addQueryParameter("environment", environment.name.lowercase())
+            .build()
+            .toString()
+
         val request = Request.Builder()
             .url(url)
             .addHeader("Authorization", publicAccessKey)

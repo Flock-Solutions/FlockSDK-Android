@@ -100,12 +100,19 @@ object FlockSDK {
      * ```
      */
     fun openPage(context: Context, pageType: String, callback: FlockWebViewCallback? = null) {
+        if (!::publicAccessKey.isInitialized) {
+            throw IllegalStateException("FlockSDK not initialized")
+        }
+
         val path = pageType.split("?").first()
         val query = pageType.split("?").getOrElse(1) { "" }
         val campaignPage = campaign?.campaignPages?.find { it.path.contains(pageType) }
-        val url = "$APP_BASE_URL/pages/$path?key=$publicAccessKey&campaign_id=${campaign?.id}&customer_id=${customer?.id}&bg=${campaignPage?.screenProps?.backgroundColor}&$query"
+        val backgroundColor = campaignPage?.screenProps?.backgroundColor
+        val url =
+            "$APP_BASE_URL/pages/$path?key=$publicAccessKey&campaign_id=${campaign?.id}&customer_id=${customer?.id}&bg=$backgroundColor&$query"
 
         FlockWebViewActivity.callback = callback
+        FlockWebViewActivity.backgroundColorHex = backgroundColor
         FlockWebViewActivity.start(context, url)
     }
 
@@ -127,7 +134,7 @@ object FlockSDK {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val service = CampaignService(publicAccessKey)
-                val result = service.getLiveCampaign()
+                val result = service.getLiveCampaign(environment)
                 campaign = result
                 Log.d("FlockSDK", "Fetched campaign: ${result.id}")
             } catch (e: Exception) {

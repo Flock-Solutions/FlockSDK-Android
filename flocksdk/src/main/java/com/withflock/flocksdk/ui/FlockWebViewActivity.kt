@@ -3,12 +3,14 @@ package com.withflock.flocksdk.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.toColorInt
 import com.withflock.flocksdk.utils.FlockEventBus
 import org.json.JSONObject
 
@@ -16,6 +18,7 @@ internal class FlockWebViewActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_URI = "extra_uri"
         var callback: FlockWebViewCallback? = null
+        var backgroundColorHex: String? = null
 
         fun start(context: Context, uri: String) {
             val intent = Intent(context, FlockWebViewActivity::class.java)
@@ -26,6 +29,7 @@ internal class FlockWebViewActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         // Make activity full screen
         window.setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -46,6 +50,16 @@ internal class FlockWebViewActivity : AppCompatActivity() {
         )
         webView.settings.javaScriptEnabled = true
         webView.webViewClient = WebViewClient()
+
+        // Dynamically set background color if provided
+        backgroundColorHex?.let { hex ->
+            try {
+                val color = hex.toColorInt()
+                webView.setBackgroundColor(color)
+            } catch (e: Exception) {
+                // Ignore invalid color
+            }
+        }
 
         // Register navigation listener
         val navigateListener: (String) -> Unit = { pageType ->
