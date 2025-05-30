@@ -1,3 +1,5 @@
+[![](https://jitpack.io/v/Flock-Solutions/FlockSDK-Android.svg)](https://jitpack.io/#Flock-Solutions/FlockSDK-Android)
+
 # Flock Android SDK
 
 Flock helps your mobile app grow with powerful, plug-and-play referral experiences. We’re a SaaS platform focused on making it dead-simple to add referral flows to your Android app—no custom UI, no backend headaches. Just drop in the SDK and let your users invite, refer, and get rewarded!
