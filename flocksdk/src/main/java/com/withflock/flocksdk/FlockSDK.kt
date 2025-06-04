@@ -137,6 +137,11 @@ object FlockSDK {
                 val result = service.getLiveCampaign(environment)
                 campaign = result
                 Log.d("FlockSDK", "Fetched campaign: ${result.id}")
+                try {
+                    service.ping(result.id)
+                } catch (e: Exception) {
+                    Log.e("FlockSDK", "Ping failed", e)
+                }
             } catch (e: Exception) {
                 Log.e("FlockSDK", "Failed to fetch campaign: ${e.message}", e)
             }
