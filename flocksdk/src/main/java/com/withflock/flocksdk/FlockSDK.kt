@@ -15,6 +15,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 object FlockSDK {
     private var uiBaseUrl: String = "https://app.withflock.com"
@@ -142,7 +144,11 @@ object FlockSDK {
      * FlockSDK.addPlacement(context, "your_placement_id", object : FlockWebViewCallback { ... })
      * ```
      */
-    fun addPlacement(context: Context, placementId: String, callback: FlockWebViewCallback? = null) {
+    fun addPlacement(
+        context: Context,
+        placementId: String,
+        callback: FlockWebViewCallback? = null
+    ) {
         if (!isInitialized || !isIdentified) {
             identifyCompletionQueue.add {
                 addPlacement(context, placementId, callback)
@@ -152,7 +158,9 @@ object FlockSDK {
 
         // Try to get background color for placement if available (fallback to null)
         val campaignPlacement = campaign?.campaignPages?.find { it.placementId == placementId }
-        val backgroundColor = campaignPlacement?.screenProps?.backgroundColor
+        val backgroundColor = campaignPlacement?.screenProps?.backgroundColor?.let {
+            URLEncoder.encode(it, StandardCharsets.UTF_8.toString())
+        }
         val url = buildString {
             append("$uiBaseUrl/placements/$placementId?key=$publicAccessKey&campaign_id=${campaign?.id}&customer_id=${customer?.id}")
             if (backgroundColor != null) {
