@@ -13,10 +13,11 @@ internal class CampaignService(private val publicAccessKey: String, private val 
     private val client = OkHttpClient()
     private val gson = Gson()
 
-    fun getLiveCampaign(environment: FlockEnvironment): Campaign {
+    fun getLiveCampaign(environment: FlockEnvironment, customerId: String): Campaign {
         val url = "$baseUrl/campaigns/live".toHttpUrlOrNull()!!
             .newBuilder()
             .addQueryParameter("environment", environment.name.lowercase())
+            .addQueryParameter("customerId", customerId)
             .build()
             .toString()
 

@@ -1,12 +1,12 @@
 package com.withflock.flocksdk.utils
 
-typealias NavigateListener = (pageType: String) -> Unit
+typealias NavigateListener = (placementId: String, backgroundColorHex: String?) -> Unit
 
 internal object FlockEventBus {
     private val listeners = mutableSetOf<NavigateListener>()
 
-    fun postNavigate(pageType: String) {
-        listeners.forEach { it(pageType) }
+    fun postNavigate(placementId: String, backgroundColorHex: String?) {
+        listeners.forEach { it(placementId, backgroundColorHex) }
     }
 
     fun registerNavigateListener(listener: NavigateListener) {

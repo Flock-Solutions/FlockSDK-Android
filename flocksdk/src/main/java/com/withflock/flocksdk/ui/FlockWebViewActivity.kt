@@ -3,7 +3,6 @@ package com.withflock.flocksdk.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -62,13 +61,17 @@ internal class FlockWebViewActivity : AppCompatActivity() {
         }
 
         // Register navigation listener
-        val navigateListener: (String) -> Unit = { pageType ->
-            val command = JSONObject()
-                .put("command", "navigate")
-                .put("data", JSONObject().put("pageType", pageType))
-                .toString()
-            val js = "window.postMessage($command, '*');"
-            webView.evaluateJavascript(js, null)
+        val navigateListener: (String, String?) -> Unit = { url, bgHex ->
+            // Load the URL directly instead of sending a command
+            try {
+                val bgInt = bgHex?.toColorInt()
+                if (bgInt != null) {
+                    webView.setBackgroundColor(bgInt)
+                }
+                webView.loadUrl(url)
+            } catch (e: Exception) {
+                // Ignore invalid color
+            }
         }
         FlockEventBus.registerNavigateListener(navigateListener)
 
@@ -86,9 +89,11 @@ internal class FlockWebViewActivity : AppCompatActivity() {
                                 finish()
                             }
                         }
+
                         "success" -> {
                             runOnUiThread { callback?.onSuccess() }
                         }
+
                         "invalid" -> {
                             runOnUiThread { callback?.onInvalid() }
                         }
