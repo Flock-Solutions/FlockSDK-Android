@@ -3,6 +3,7 @@ package com.withflock.flocksdk.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -81,7 +82,9 @@ internal class FlockWebViewActivity : AppCompatActivity() {
             fun postMessage(message: String) {
                 try {
                     val json = JSONObject(message)
-                    when (json.optString("event")) {
+                    val event = json.optString("event")
+
+                    when (event) {
                         "close" -> {
                             runOnUiThread {
                                 callback?.onClose()
@@ -97,9 +100,32 @@ internal class FlockWebViewActivity : AppCompatActivity() {
                         "invalid" -> {
                             runOnUiThread { callback?.onInvalid() }
                         }
+
+                        "shared" -> {
+                            runOnUiThread {
+                                try {
+                                    // Extract the title from the data property
+                                    val data = json.optJSONObject("data")
+                                    val title = data?.optString("title")
+                                    
+                                    if (!title.isNullOrEmpty()) {
+                                        // Create the share intent
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, title)
+                                        }
+                                        
+                                        // Start the share sheet
+                                        startActivity(Intent.createChooser(shareIntent, "Share via"))
+                                    }
+                                } catch (e: Exception) {
+                                    Log.w("FlockWebViewActivity", "Error handling shared event", e)
+                                }
+                            }
+                        }
                     }
                 } catch (e: Exception) {
-                    // Optionally log or handle parse error
+                    Log.w("FlockWebViewActivity", "Error parsing message from WebView: $message", e)
                 }
             }
         }, "ReactNativeWebView")
