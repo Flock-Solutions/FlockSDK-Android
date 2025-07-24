@@ -104,12 +104,14 @@ object FlockSDK {
      * @param externalUserId An opaque identifier for the user in your app
      * @param email The user's email address
      * @param name The user's name
+     * @param customProperties Optional custom properties for the user
      * @return The identified customer or null if identification failed
      */
     suspend fun identify(
         externalUserId: String,
         email: String,
         name: String,
+        customProperties: Map<String, Any?>? = null
     ): Customer? {
         if (!isInitialized) {
             logError("Failed to identify user: SDK not initialized. Call initialize() first.")
@@ -129,7 +131,8 @@ object FlockSDK {
         val request = IdentifyRequest(
             externalUserId = externalUserId,
             email = email,
-            name = name
+            name = name,
+            customProperties = customProperties
         )
 
         return try {
