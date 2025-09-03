@@ -47,47 +47,36 @@ CoroutineScope(Dispatchers.Main).launch {
 
 ---
 
-### 4. Launch the Referral Flow
+### 4. Trigger Checkpoints
 
-Show your users a full-screen referral experience with a single call:
-
-```kotlin
-FlockSDK.openPage(context, "referrer") // or "invitee" for invitees
-```
-
-#### React to events
-
-Subscribe to events when users enter a valid referral code, hit an error, or close the modal:
+Trigger checkpoints to show Flock experiences at specific moments in your user journey:
 
 ```kotlin
-FlockSDK.openPage(context, "referrer", object : FlockWebViewCallback {
-    override fun onClose() { /* User closed the modal */ }
-    override fun onSuccess() { /* Invitee entered valid referral code */ }
-    override fun onInvalid() { /* Invitee entered invalid referral code */ }
-})
-```
+// Simple checkpoint trigger
+FlockSDK.checkpoint("refer_button_clicked").trigger(context)
 
----
-
-### 5. Control the Referral Flow from Native
-
-You can programmatically tell the Flock modal to navigate to a different page (if it’s open):
-
-```kotlin
-FlockSDK.navigate("invitee?state=success")
-```
-
-This is particularly useful when you want to navigate to the success screen after the invitee enters a valid referral code.
-
-```kotlin
-FlockSDK.openPage(context, "invitee", object : FlockWebViewCallback {
-    override fun onClose() {}
-    override fun onSuccess() {
-        FlockSDK.navigate("invitee?state=success")
+// With callbacks
+FlockSDK.checkpoint("refer_button_clicked")
+    .onClose {
+        Log.d("Flock", "Checkpoint closed")
     }
-    override fun onInvalid() {}
-})
+    .onSuccess {
+        Log.d("Flock", "Checkpoint succeeded")
+    }
+    .onInvalid {
+        Log.d("Flock", "Checkpoint invalid")
+    }
+    .trigger(context)
+
+// Checkpoint with navigation in success callback
+FlockSDK.checkpoint("user_onboarded")
+    .onSuccess {
+        // Navigate to success screen when invitee enters valid referral code
+        FlockSDK.checkpoint("referral_succeeded").navigate().trigger(context)
+    }
+    .trigger(context)
 ```
+
 ---
 
 ## 🛠️ Why Flock?
