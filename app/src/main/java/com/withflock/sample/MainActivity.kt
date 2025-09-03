@@ -14,13 +14,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        FlockSDK.setBaseUrlForTesting(
-            uiUrl = "https://app-dev.withflock.com",
-            apiUrl = "https://api-dev.withflock.com"
-        )
-
         FlockSDK.initialize(
-            publicAccessKey = "pk_b417b6bfb718a8faef4e52b8336cc8b4",
+            publicAccessKey = "pk_ba3b841f41c4b26cc34fa6aebf660efb",
             environment = FlockEnvironment.TEST
         )
 
@@ -33,17 +28,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.referrerButton).setOnClickListener {
-            FlockSDK.addPlacement(this, "referrer")
+            FlockSDK.checkpoint("cta_button_clicked").trigger(this)
         }
         findViewById<Button>(R.id.inviteeButton).setOnClickListener {
-            FlockSDK.addPlacement(this, "invitee", object : FlockWebViewCallback {
-                override fun onClose() {}
-                override fun onSuccess() {
-                    FlockSDK.navigate("invitee_success")
-                }
-
-                override fun onInvalid() {}
-            })
+            FlockSDK.checkpoint("user_signup").onSuccess {
+                FlockSDK.checkpoint("referral_succeeded").navigate().trigger(this)
+            }.trigger(this)
         }
     }
 }

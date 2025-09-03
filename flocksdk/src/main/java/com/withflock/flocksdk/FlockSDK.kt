@@ -4,13 +4,17 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.withflock.flocksdk.model.Campaign
+import com.withflock.flocksdk.model.CampaignCheckpoint
 import com.withflock.flocksdk.model.CampaignPage
 import com.withflock.flocksdk.model.Customer
 import com.withflock.flocksdk.model.IdentifyRequest
+import com.withflock.flocksdk.network.CampaignCheckpointService
 import com.withflock.flocksdk.network.CampaignService
 import com.withflock.flocksdk.network.CustomerService
 import com.withflock.flocksdk.ui.FlockWebViewActivity
 import com.withflock.flocksdk.ui.FlockWebViewCallback
+import com.withflock.flocksdk.utils.CheckpointBuilder
+import com.withflock.flocksdk.utils.CheckpointOptions
 import com.withflock.flocksdk.utils.FlockEventBus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,6 +27,7 @@ object FlockSDK {
     private lateinit var publicAccessKey: String
     private var campaign: Campaign? = null
     private var customer: Customer? = null
+    private var campaignCheckpoints: List<CampaignCheckpoint> = emptyList()
     private var isInitialized = false
     private var isIdentified = false
     private val identifyCompletionQueue = mutableListOf<() -> Unit>()
@@ -89,11 +94,17 @@ object FlockSDK {
     fun getCurrentCustomer(): Customer? = customer
 
     /**
+     * Returns the current campaign checkpoints if available
+     */
+    fun getCampaignCheckpoints(): List<CampaignCheckpoint> = campaignCheckpoints
+
+    /**
      * Clears the current user session
      * This will reset the identified state and clear any user-specific data
      */
     fun clearSession() {
         customer = null
+        campaignCheckpoints = emptyList()
         isIdentified = false
         logInfo("User session cleared")
     }
@@ -139,6 +150,7 @@ object FlockSDK {
             withContext(Dispatchers.IO) {
                 val customerService = CustomerService(publicAccessKey, apiBaseUrl)
                 val campaignService = CampaignService(publicAccessKey, apiBaseUrl)
+                val campaignCheckpointService = CampaignCheckpointService(publicAccessKey, apiBaseUrl)
 
                 val identifyResult = customerService.identify(request)
                 customer = identifyResult
@@ -146,6 +158,15 @@ object FlockSDK {
                 val campaignResult =
                     campaignService.getLiveCampaign(environment, identifyResult.id)
                 campaign = campaignResult
+                
+                // Fetch campaign checkpoints
+                try {
+                    campaignCheckpoints = campaignCheckpointService.getCampaignCheckpoints(campaignResult.id)
+                    logInfo("Fetched ${campaignCheckpoints.size} campaign checkpoints")
+                } catch (e: Exception) {
+                    logError("Failed to fetch campaign checkpoints", e)
+                    campaignCheckpoints = emptyList()
+                }
 
                 isIdentified = true
 
@@ -160,52 +181,27 @@ object FlockSDK {
     }
 
     /**
-     * Opens a Flock webpage in a full-screen modal.
+     * Creates a builder for configuring and executing a checkpoint.
      *
-     * @deprecated Use addPlacement instead.
+     * @param checkpointName The name of the checkpoint to trigger
+     * @return A CheckpointBuilder instance for method chaining
+     *
+     * Example usage:
+     * ```kotlin
+     * // Simple checkpoint trigger
+     * FlockSDK.checkpoint("refer_button_clicked").trigger(context)
+     *
      */
-    @Deprecated("Use addPlacement instead.")
-    fun openPage(context: Context, pageType: String, callback: FlockWebViewCallback? = null) {
+    fun checkpoint(checkpointName: String): CheckpointBuilder {
         if (!isInitialized) {
-            logError("Cannot open page: SDK not initialized. Call initialize() first.")
-            return
-        }
-
-        if (pageType.isBlank()) {
-            logError("Cannot open page: pageType cannot be empty")
-            return
+            logError("Cannot create checkpoint: SDK not initialized. Call initialize() first.")
         }
 
         if (!isIdentified) {
-            logWarn("User not identified yet. Queueing openPage call.")
-            identifyCompletionQueue.add {
-                openPage(context, pageType, callback)
-            }
-            return
+            logWarn("User not identified yet. Checkpoint may not work correctly.")
         }
 
-        try {
-            val path = pageType.split("?").first()
-            val query = pageType.split("?").getOrElse(1) { "" }
-            val campaignPage = campaign?.campaignPages?.find { it.path.contains(pageType) }
-            val backgroundColor = campaignPage?.screenProps?.backgroundColor
-            val url = buildString {
-                append("$uiBaseUrl/pages/$path?key=$publicAccessKey&campaign_id=${campaign?.id}&customer_id=${customer?.id}")
-                if (backgroundColor != null) {
-                    append("&bg=${android.net.Uri.encode(backgroundColor)}")
-                }
-                if (query.isNotBlank()) {
-                    append("&$query")
-                }
-            }
-
-            FlockWebViewActivity.callback = callback
-            FlockWebViewActivity.backgroundColorHex = backgroundColor
-            FlockWebViewActivity.start(context, url)
-            logDebug("Opening page $pageType with URL: $url")
-        } catch (e: Exception) {
-            logError("Error opening page $pageType", e)
-        }
+        return CheckpointBuilder(checkpointName, this)
     }
 
     /**
@@ -220,6 +216,7 @@ object FlockSDK {
      * FlockSDK.addPlacement(context, "your_placement_id", object : FlockWebViewCallback { ... })
      * ```
      */
+    @Deprecated("Use checkpoint(checkpointName) instead")
     fun addPlacement(
         context: Context,
         placementId: String,
@@ -246,7 +243,7 @@ object FlockSDK {
         }
 
         try {
-            val campaignPlacement = campaign?.campaignPages?.find { it.placementId == placementId }
+            val campaignPlacement = campaign?.campaignPages?.find { it.placementId == placementId || it.id == placementId }
             if (campaignPlacement == null) {
                 logWarn("Placement $placementId not found in campaign")
                 return
@@ -292,7 +289,7 @@ object FlockSDK {
 
         try {
             // Try to get background color for placement if available (fallback to null)
-            val campaignPlacement = campaign?.campaignPages?.find { it.placementId == placementId }
+            val campaignPlacement = campaign?.campaignPages?.find { it.placementId == placementId || it.id == placementId }
             if (campaignPlacement == null) {
                 logError("Placement $placementId not found in campaign")
                 return
@@ -321,6 +318,78 @@ object FlockSDK {
             append("$uiBaseUrl/placements/${placement.placementId}?key=$publicAccessKey&campaign_id=${campaign?.id}&customer_id=${customer?.id}")
             if (backgroundColor != null) {
                 append("&bg=${Uri.encode(backgroundColor)}")
+            }
+        }
+    }
+
+    /**
+     * Internal method to trigger checkpoint logic.
+     * This is called by the CheckpointBuilder when trigger() is called.
+     */
+    internal fun triggerCheckpoint(
+        context: Context,
+        checkpointName: String,
+        options: CheckpointOptions,
+        onClose: (() -> Unit)?,
+        onSuccess: (() -> Unit)?,
+        onInvalid: (() -> Unit)?
+    ) {
+        if (!isInitialized) {
+            logError("Cannot trigger checkpoint: SDK not initialized. Call initialize() first.")
+            return
+        }
+
+        if (!isIdentified) {
+            logWarn("User not identified yet. Queueing checkpoint call.")
+            identifyCompletionQueue.add {
+                triggerCheckpoint(context, checkpointName, options, onClose, onSuccess, onInvalid)
+            }
+            return
+        }
+
+        val checkpoint = campaignCheckpoints.find { it.checkpointName == checkpointName }
+        if (checkpoint == null) {
+            logDebug("Checkpoint with name '$checkpointName' not found.")
+            return
+        }
+
+        val placementId = checkpoint.placementId
+        if (placementId.isNullOrEmpty()) {
+            logDebug("Checkpoint '$checkpointName' does not have a placementId.")
+            return
+        }
+
+        // Navigate within existing WebView
+        if (options.navigate) {
+            try {
+                navigate(placementId)
+                onSuccess?.invoke()
+            } catch (e: Exception) {
+                logError("Error navigating to placement $placementId", e)
+                onInvalid?.invoke()
+            }
+        }
+        // Open placement in full-screen modal
+        else {
+            val callback = object : FlockWebViewCallback {
+                override fun onClose() {
+                    onClose?.invoke()
+                }
+
+                override fun onSuccess() {
+                    onSuccess?.invoke()
+                }
+
+                override fun onInvalid() {
+                    onInvalid?.invoke()
+                }
+            }
+
+            try {
+                addPlacement(context, placementId, callback)
+            } catch (e: Exception) {
+                logError("Error opening placement $placementId", e)
+                onInvalid?.invoke()
             }
         }
     }
