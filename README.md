@@ -40,7 +40,11 @@ CoroutineScope(Dispatchers.Main).launch {
     FlockSDK.identify(
         externalUserId = "user-123",
         email = "user@email.com",
-        name = "Jane Doe"
+        name = "Jane Doe",
+        customProperties = mapOf(
+            "tier" to "pro",
+            "subscriptionType" to "annual"
+        )
     )
 }
 ```

@@ -6,7 +6,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.withflock.flocksdk.FlockEnvironment
 import com.withflock.flocksdk.FlockSDK
-import com.withflock.flocksdk.ui.FlockWebViewCallback
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -23,7 +22,10 @@ class MainActivity : AppCompatActivity() {
             FlockSDK.identify(
                 externalUserId = "user_123",
                 email = "jane@example.com",
-                name = "Jane Doe"
+                name = "Jane Doe",
+                customProperties = mapOf(
+                    "tier" to "Pro"
+                )
             )
         }
 
