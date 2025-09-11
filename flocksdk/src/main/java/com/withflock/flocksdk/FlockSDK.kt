@@ -143,6 +143,7 @@ object FlockSDK {
             externalUserId = externalUserId,
             email = email,
             name = name,
+            environment = environment,
             customProperties = customProperties
         )
 
